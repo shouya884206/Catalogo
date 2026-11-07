@@ -103,9 +103,9 @@ jobs:
       - name: Poner el ícono
         run: |
           for d in android/app/src/main/res/mipmap-*dpi; do
-            cp icon-${{ matrix.icon }}-192.png $d/ic_launcher.png
-            cp icon-${{ matrix.icon }}-192.png $d/ic_launcher_round.png
-            cp icon-${{ matrix.icon }}-192.png $d/ic_launcher_foreground.png
+            cp icon-${{ matrix.icon }}-512.png $d/ic_launcher.png
+            cp icon-${{ matrix.icon }}-512.png $d/ic_launcher_round.png
+            cp icon-${{ matrix.icon }}-512.png $d/ic_launcher_foreground.png
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
@@ -145,4 +145,3 @@ jobs:
           tag_name: apk-${{ github.run_number }}
           name: APK ${{ github.run_number }}
           files: apks/*.apk
-          
