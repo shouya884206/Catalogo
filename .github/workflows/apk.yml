@@ -46,17 +46,39 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Configurar fondo de inicio
+      - name: Configurar pantalla de inicio
         env:
           SPLASH_COLOR: ${{ matrix.splash_color }}
         run: |
           mkdir -p android/app/src/main/res/values
+          mkdir -p android/app/src/main/res/drawable
 
           cat > android/app/src/main/res/values/splash_colors.xml <<EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <color name="splash_background">${SPLASH_COLOR}</color>
           </resources>
+          EOF
+
+          cat > android/app/src/main/res/drawable/splash.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@color/splash_background" />
+              <item>
+                  <bitmap
+                      android:src="@mipmap/ic_launcher"
+                      android:gravity="center"
+                      android:filter="true" />
+              </item>
+          </layer-list>
+          EOF
+
+          cat > android/app/src/main/res/drawable/splash_icon.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+              android:src="@mipmap/ic_launcher"
+              android:gravity="center"
+              android:filter="true" />
           EOF
 
           python3 - <<'PY'
@@ -70,37 +92,33 @@ jobs:
           match = re.search(pattern, content, re.DOTALL)
 
           if not match:
-              raise SystemExit("No se encontró AppTheme.NoActionBarLaunch en styles.xml")
+              raise SystemExit("No se encontró AppTheme.NoActionBarLaunch")
 
           block = match.group(2)
 
-          additions = """
-                  <item name="android:background">@color/splash_background</item>
-                  <item name="windowSplashScreenBackground">@color/splash_background</item>
-                  <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
-                  <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
-          """
+          items = {
+              "android:background": "@drawable/splash",
+              "windowSplashScreenBackground": "@color/splash_background",
+              "windowSplashScreenAnimatedIcon": "@drawable/splash_icon",
+              "windowSplashScreenIconBackgroundColor": "@android:color/transparent",
+              "postSplashScreenTheme": "@style/AppTheme.NoActionBar"
+          }
 
-          for item in [
-              "android:background",
-              "windowSplashScreenBackground",
-              "windowSplashScreenIconBackgroundColor",
-              "postSplashScreenTheme"
-          ]:
+          for name, value in items.items():
               block = re.sub(
-                  r'\s*<item\s+name="' + re.escape(item) + r'">.*?</item>',
+                  r'\s*<item\s+name="' + re.escape(name) + r'">.*?</item>',
                   '',
                   block,
                   flags=re.DOTALL
               )
+              block += f'\n        <item name="{name}">{value}</item>'
 
-          new_block = match.group(1) + block.rstrip() + "\n" + additions + "\n    " + match.group(3)
-          content = content[:match.start()] + new_block + content[match.end():]
-
+          replacement = match.group(1) + block + "\n    " + match.group(3)
+          content = content[:match.start()] + replacement + content[match.end():]
           styles.write_text(content, encoding="utf-8")
           PY
 
-      - name: Poner el ícono
+      - name: Poner los iconos
         run: |
           for d in android/app/src/main/res/mipmap-*dpi; do
             cp icon-${{ matrix.icon }}-512.png $d/ic_launcher.png
