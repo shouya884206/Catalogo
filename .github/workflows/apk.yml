@@ -50,6 +50,34 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Crear logotipo de inicio completo
+        run: |
+          python3 -m pip install pillow
+
+          mkdir -p android/app/src/main/res/drawable-nodpi
+
+          python3 - <<'PY'
+          from PIL import Image
+
+          icon = Image.open("icon-${{ matrix.icon }}-512.png").convert("RGBA")
+
+          canvas_size = 512
+          logo_size = 328
+
+          icon.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
+
+          canvas = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+
+          x = (canvas_size - icon.width) // 2
+          y = (canvas_size - icon.height) // 2
+
+          canvas.alpha_composite(icon, (x, y))
+
+          canvas.save(
+              "android/app/src/main/res/drawable-nodpi/splash_logo.png"
+          )
+          PY
+
       - name: Configurar pantalla de inicio
         env:
           SPLASH_COLOR: ${{ matrix.splash_color }}
@@ -68,23 +96,21 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
               <item android:drawable="@color/splash_background" />
-              <item
-                  android:drawable="@mipmap/ic_launcher"
-                  android:width="192dp"
-                  android:height="192dp"
-                  android:gravity="center" />
+              <item android:gravity="center">
+                  <bitmap
+                      android:src="@drawable/splash_logo"
+                      android:gravity="center"
+                      android:filter="true" />
+              </item>
           </layer-list>
           EOF
 
           cat > android/app/src/main/res/drawable/splash_icon.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item
-                  android:drawable="@mipmap/ic_launcher"
-                  android:width="192dp"
-                  android:height="192dp"
-                  android:gravity="center" />
-          </layer-list>
+          <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+              android:src="@drawable/splash_logo"
+              android:gravity="center"
+              android:filter="true" />
           EOF
 
           python3 - <<'PY'
@@ -125,7 +151,7 @@ jobs:
           styles.write_text(content, encoding="utf-8")
           PY
 
-      - name: Poner los iconos
+      - name: Poner los iconos normales
         run: |
           for d in android/app/src/main/res/mipmap-*dpi; do
             cp icon-${{ matrix.icon }}-512.png $d/ic_launcher.png
