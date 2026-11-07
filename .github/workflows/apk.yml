@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
@@ -18,6 +19,7 @@ jobs:
             name: Admin Catálogo Plus
             icon: admin
             splash_color: "#160B08"
+
           - file: visor
             id: com.catalogo.visor
             name: Catálogo Plus
@@ -40,8 +42,10 @@ jobs:
         run: |
           mkdir www
           cp ${{ matrix.file }}.html www/index.html
+
           npm init -y
           npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+
           npx cap init "${{ matrix.name }}" ${{ matrix.id }} --web-dir www
           npx cap add android
           npx cap sync android
@@ -60,7 +64,7 @@ jobs:
           </resources>
           EOF
 
-          cat > android/app/src/main/res/drawable/splash.xml <<'EOF'
+          cat > android/app/src/main/res/drawable/splash_background_layer.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
               <item android:drawable="@color/splash_background" />
@@ -97,7 +101,7 @@ jobs:
           block = match.group(2)
 
           items = {
-              "android:background": "@drawable/splash",
+              "android:background": "@drawable/splash_background_layer",
               "windowSplashScreenBackground": "@color/splash_background",
               "windowSplashScreenAnimatedIcon": "@drawable/splash_icon",
               "windowSplashScreenIconBackgroundColor": "@android:color/transparent",
@@ -115,6 +119,7 @@ jobs:
 
           replacement = match.group(1) + block + "\n    " + match.group(3)
           content = content[:match.start()] + replacement + content[match.end():]
+
           styles.write_text(content, encoding="utf-8")
           PY
 
@@ -125,6 +130,7 @@ jobs:
             cp icon-${{ matrix.icon }}-512.png $d/ic_launcher_round.png
             cp icon-${{ matrix.icon }}-512.png $d/ic_launcher_foreground.png
           done
+
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
       - name: Usar llave fija
@@ -139,7 +145,8 @@ jobs:
           ./gradlew assembleDebug
 
       - name: Guardar APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk ${{ matrix.file }}.apk
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk ${{ matrix.file }}.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -149,6 +156,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
 
