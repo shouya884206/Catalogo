@@ -46,6 +46,10 @@ jobs:
             cp icon-${{ matrix.icon }}-192.png $d/ic_launcher_foreground.png
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
+      - name: Usar llave fija
+        run: |
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
       - name: Compilar APK
         run: |
           cd android
@@ -73,3 +77,4 @@ jobs:
           tag_name: apk-${{ github.run_number }}
           name: APK ${{ github.run_number }}
           files: apks/*.apk
+          
