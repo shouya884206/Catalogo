@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest-visor.json">
+<meta name="theme-color" content="#2c3e50">
+<link rel="apple-touch-icon" href="icon-visor-192.png">
+<title>Catálogo</title>
+<style>
+:root{--bg:#faf8f5;--card:#fff;--tx:#1f1d1a;--mu:#7a746b;--ac:#c4552d;--bd:#e6e1d8;--ph:#ece7de;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16140f;--card:#201d17;--tx:#f2ede4;--mu:#9a9387;--ac:#e8794f;--bd:#34302a;--ph:#2a2620;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#16140f;--card:#201d17;--tx:#f2ede4;--mu:#9a9387;--ac:#e8794f;--bd:#34302a;--ph:#2a2620;color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{height:100%;display:flex;flex-direction:column;max-width:900px;margin:0 auto}
+header{display:flex;align-items:center;gap:10px;padding:14px 16px}
+h1{font-size:22px;flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 14px;background:var(--ac);color:#fff;font-weight:600}
+button.g{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.row{display:flex;gap:8px;padding:0 16px 12px}
+input{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;min-width:0}
+.row input{flex:1}
+#st{padding:0 16px 8px;color:var(--mu);font-size:13px;min-height:22px}
+#res{overflow:auto;flex:1}
+h2{font-size:14px;color:var(--mu);padding:4px 16px 8px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;padding:0 16px 20px}
+.cat{background:var(--card);border:1px solid var(--bd);border-radius:16px;overflow:hidden;cursor:pointer}
+.cov{aspect-ratio:4/3;background:var(--ph);display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--mu)}
+.cov img{width:100%;height:100%;object-fit:cover}
+.cat b{display:block;padding:10px 12px 2px;font-size:15px}
+.cat small{display:block;padding:0 12px 10px;color:var(--mu)}
+.empty{padding:40px 24px;text-align:center;color:var(--mu);line-height:1.5}
+.set{padding:16px;display:flex;flex-direction:column;gap:12px}
+.set p{color:var(--mu);line-height:1.5;font-size:14px}
+.car{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;min-height:0}
+.car::-webkit-scrollbar{display:none}
+.sl{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;padding:0 12px;min-height:0}
+.sl img{flex:1;min-height:0;width:100%;object-fit:contain;border-radius:14px;background:var(--ph)}
+.ct{font-size:18px;font-weight:600;text-align:center;padding:10px 0 12px;min-height:44px}
+.cnt{text-align:center;color:var(--mu);font-size:14px;padding:0 0 8px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+function ld(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+var cfg=ld('cfgv',{}),S=ld('Sv',{v:-1,cats:[],imgs:[]}),IM={},scr='home',cur=null,idx=0,q='',ST='';
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var by=function(a,b){return(a.t||0)-(b.t||0)};
+function imgsOf(id){return S.imgs.filter(function(m){return m.cat===id}).sort(by)}
+function idb(){return new Promise(function(r,j){var o=indexedDB.open('cimgv',1);o.onupgradeneeded=function(){o.result.createObjectStore('i')};o.onsuccess=function(){r(o.result)};o.onerror=function(){j(o.error)}})}
+async function iget(k){try{var d=await idb();return await new Promise(function(r){var o=d.transaction('i').objectStore('i').get(k);o.onsuccess=function(){r(o.result)};o.onerror=function(){r(null)}})}catch(e){return null}}
+async function iput(k,v){try{var d=await idb();d.transaction('i','readwrite').objectStore('i').put(v,k)}catch(e){}}
+async function need(id){
+  if(IM[id])return IM[id];
+  var d=await iget(id);
+  if(!d&&cfg.url){try{var r=await(await fetch(cfg.url+'?a=img&id='+id)).json();if(r.ok){d='data:'+r.mime+';base64,'+r.data;iput(id,d)}}catch(e){}}
+  if(d){IM[id]=d;document.querySelectorAll('img[data-i="'+id+'"]').forEach(function(e){e.src=d})}
+  return d;
+}
+function hydrate(){document.querySelectorAll('img[data-i]').forEach(function(e){if(!e.getAttribute('src'))need(e.dataset.i)})}
+async function prefetch(){for(var i=0;i<S.imgs.length;i++)await need(S.imgs[i].id)}
+function im(m,alt){return '<img data-i="'+m.id+'" alt="'+esc(alt||'')+'"'+(IM[m.id]?' src="'+IM[m.id]+'"':'')+'>'}
+function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
+async function pull(){
+  if(!cfg.url)return;
+  try{
+    var d=await(await fetch(cfg.url+'?a=list&_='+Date.now())).json();
+    if(d.ok){var ch=d.v!==S.v;S={v:d.v,cats:d.cats,imgs:d.imgs};sv('Sv',S);setSt('');if(ch)refresh();prefetch()}
+  }catch(e){setSt('Sin conexión: mostrando la última copia guardada')}
+}
+function setup(){
+  scr='set';
+  $('#app').innerHTML='<header><h1>Configuración</h1>'+(cfg.url?'<button class="g" data-a="home">Cerrar</button>':'')+'</header><div class="set"><p>Pega el enlace de tu Apps Script (termina en /exec).</p><input id="u" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(cfg.url)+'"><button data-a="savecfg">Guardar</button></div>';
+}
+function home(){
+  if(!cfg.url){setup();return}
+  scr='home';cur=null;
+  $('#app').innerHTML='<header><h1>Catálogo</h1><button class="g" data-a="setup">⚙</button></header><div class="row"><input id="q" type="search" placeholder="Buscar categoría o imagen" value="'+esc(q)+'"></div><div id="st">'+esc(ST)+'</div><div id="res"></div>';
+  results();
+}
+function results(){
+  var el=$('#res');if(!el)return;
+  var qq=q.trim().toLowerCase(),cs=S.cats.slice().sort(by).filter(function(c){return !qq||c.name.toLowerCase().indexOf(qq)>-1}),h='';
+  if(!cs.length&&!qq)h='<div class="empty">Todavía no hay nada en el catálogo.<br>Conéctate a internet para descargarlo.</div>';
+  else{
+    if(cs.length)h+='<div class="grid">'+cs.map(function(c){var l=imgsOf(c.id),m=l[0];return '<div class="cat" data-a="open" data-id="'+c.id+'"><div class="cov">'+(m?im(m):'▦')+'</div><b>'+esc(c.name)+'</b><small>'+l.length+(l.length==1?' imagen':' imágenes')+'</small></div>'}).join('')+'</div>';
+    if(qq){
+      var ms=S.imgs.filter(function(m){return(m.name||'').toLowerCase().indexOf(qq)>-1});
+      if(ms.length)h+='<h2>Imágenes</h2><div class="grid">'+ms.map(function(m){return '<div class="cat" data-a="openimg" data-id="'+m.id+'"><div class="cov">'+im(m)+'</div><b>'+esc(m.name)+'</b><small></small></div>'}).join('')+'</div>';
+      if(!cs.length&&!ms.length)h='<div class="empty">Sin resultados para “'+esc(q.trim())+'”.</div>';
+    }
+  }
+  el.innerHTML=h;hydrate();
+}
+function catView(keep){
+  var c=S.cats.find(function(x){return x.id===cur});if(!c){home();return}
+  scr='cat';var l=imgsOf(c.id),g=keep?idx:0;
+  var h='<header><button class="g" data-a="home">←</button><h1>'+esc(c.name)+'</h1></header><div id="st">'+esc(ST)+'</div>';
+  if(!l.length)h+='<div class="empty" style="flex:1">Esta categoría aún no tiene imágenes.</div>';
+  else h+='<div class="car" id="car">'+l.map(function(m){return '<div class="sl">'+im(m,m.name)+'<div class="ct">'+esc(m.name)+'</div></div>'}).join('')+'</div><div class="cnt" id="cnt"></div>';
+  $('#app').innerHTML=h;hydrate();
+  var car=$('#car');
+  if(car){g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u()}
+}
+function refresh(){if(scr==='cat')catView(true);else if(scr==='home'){var a=document.activeElement;if(a&&a.id==='q')results();else home()}}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-a]');if(!t)return;var a=t.dataset.a,id=t.dataset.id;
+  if(a==='home')home();
+  else if(a==='setup')setup();
+  else if(a==='savecfg'){cfg={url:$('#u').value.trim()};sv('cfgv',cfg);home();pull()}
+  else if(a==='open'){cur=id;idx=0;catView(false)}
+  else if(a==='openimg'){var m=S.imgs.find(function(x){return x.id===id});if(m){cur=m.cat;idx=imgsOf(m.cat).findIndex(function(x){return x.id===id});catView(true)}}
+});
+document.addEventListener('input',function(e){if(e.target.id==='q'){q=e.target.value;results()}});
+document.addEventListener('keydown',function(e){var car=$('#car');if(car){if(e.key==='ArrowRight')car.scrollBy({left:car.clientWidth,behavior:'smooth'});if(e.key==='ArrowLeft')car.scrollBy({left:-car.clientWidth,behavior:'smooth'})}});
+window.addEventListener('online',pull);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)pull()});
+setInterval(pull,60000);
+home();pull();
+</script>
+</body>
+</html>
