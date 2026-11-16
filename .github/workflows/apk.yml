@@ -162,9 +162,17 @@ jobs:
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
       - name: Usar llave fija
+        env:
+          LLAVE_B64: ${{ secrets.CATALOGO_KEYSTORE_B64 }}
         run: |
           mkdir -p ~/.android
-          cp debug.keystore ~/.android/debug.keystore
+          if [ -n "$LLAVE_B64" ]; then
+            echo "$LLAVE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Llave privada (secreto de GitHub)"
+          else
+            cp debug.keystore ~/.android/debug.keystore
+            echo "Llave antigua del repositorio (falta crear el secreto CATALOGO_KEYSTORE_B64)"
+          fi
 
       - name: Número de versión creciente
         run: |
