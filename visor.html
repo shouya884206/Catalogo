@@ -59,6 +59,7 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 .cap{display:flex;gap:8px}
 .cap input{flex:1;text-align:center;font-weight:600}
 .ct{font-size:20px;font-weight:700;text-align:center;padding:4px 0 6px;min-height:36px}
+.ex{font-size:15px;font-weight:600;color:#22c55e;margin-top:2px}.ex.no{color:#ef4444}
 .lnk{background:transparent;color:var(--mu);font-weight:500;text-decoration:underline;padding:4px}
 .cnt{text-align:center;color:var(--mu);font-size:13px;padding:10px 0 14px}
 .ban{margin:0 18px 12px;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid var(--wn);font-size:14px;display:flex;flex-direction:column;gap:10px;line-height:1.4}
@@ -82,30 +83,53 @@ function imgsOf(id){return S.imgs.filter(function(m){return m.cat===id}).sort(by
 function idb(){return new Promise(function(r,j){var o=indexedDB.open('cimgv',1);o.onupgradeneeded=function(){o.result.createObjectStore('i')};o.onsuccess=function(){r(o.result)};o.onerror=function(){j(o.error)}})}
 async function iget(k){try{var d=await idb();return await new Promise(function(r){var o=d.transaction('i').objectStore('i').get(k);o.onsuccess=function(){r(o.result)};o.onerror=function(){r(null)}})}catch(e){return null}}
 async function iput(k,v){try{var d=await idb();d.transaction('i','readwrite').objectStore('i').put(v,k)}catch(e){}}
+var KEYLIST={};
+function ik(m){return m.id+'.'+(m.iv||0)}
 async function need(id){
-  if(IM[id])return IM[id];
-  var d=await iget(id);
-  if(!d&&cfg.url){try{var r=await(await fetch(cfg.url+'?a=img&id='+id)).json();if(r.ok){d='data:'+r.mime+';base64,'+r.data;iput(id,d)}}catch(e){}}
-  if(d){IM[id]=d;document.querySelectorAll('img[data-i="'+id+'"]').forEach(function(e){e.src=d})}
+  var m=S.imgs.find(function(x){return x.id===id});if(!m)return null;var k=ik(m);
+  if(IM[k])return IM[k];
+  var d=await iget(k);
+  if(!d&&cfg.k){try{var r=await call({action:'cat_img',id:id});if(r.ok){d='data:'+r.mime+';base64,'+r.data;iput(k,d)}}catch(e){}}
+  if(d){IM[k]=d;document.querySelectorAll('img[data-i="'+id+'"]').forEach(function(e){e.src=d})}
   return d;
 }
 function hydrate(){document.querySelectorAll('img[data-i]').forEach(function(e){if(!e.getAttribute('src'))need(e.dataset.i)})}
 async function prefetch(){for(var i=0;i<S.imgs.length;i++)await need(S.imgs[i].id)}
-function im(m,alt){return '<img data-i="'+m.id+'" alt="'+esc(alt||'')+'"'+(IM[m.id]?' src="'+IM[m.id]+'"':'')+'>'}
+function im(m,alt){return '<img data-i="'+m.id+'" alt="'+esc(alt||'')+'"'+(IM[ik(m)]?' src="'+IM[ik(m)]+'"':'')+'>'}
+function ex(m){return m.stock==null?'':'<div class="ex'+(m.stock>0?'':' no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</div>'}
 function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
+async function post(b){var r=await fetch(cfg.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
+async function login(){var r=await post({action:'acc_login',rol:'c',id:cfg.i,llave:cfg.k,neg:cfg.n});if(r.ok&&r.ctoken){cfg.tok=r.ctoken;sv('cfgv',cfg)}return r}
+async function call(b){
+  if(!cfg.tok){var l=await login();if(!l.ok)throw new Error(l.error||'Acceso inválido')}
+  var r=await post(Object.assign({ctoken:cfg.tok},b));
+  if(r&&r.sesion){var l2=await login();if(!l2.ok)throw new Error(l2.error||'Acceso inválido');r=await post(Object.assign({ctoken:cfg.tok},b))}
+  return r;
+}
 async function pull(){
-  if(!cfg.url)return;
+  if(!cfg.k)return;
   try{
-    var d=await(await fetch(cfg.url+'?a=list&_='+Date.now())).json();
-    if(d.ok){var ch=d.v!==S.v;S={v:d.v,cats:d.cats,imgs:d.imgs};sv('Sv',S);setSt('');if(ch)refresh();prefetch()}
+    var d=await call({action:'cat_list'});
+    if(d.ok){var ch=JSON.stringify([d.cats,d.imgs])!==JSON.stringify([S.cats,S.imgs]);S={v:d.v,cats:d.cats,imgs:d.imgs};sv('Sv',S);setSt('');if(ch)refresh();prefetch()}
+    else setSt(d.error||'No se pudo actualizar')
   }catch(e){setSt('Sin conexión: mostrando la última copia guardada')}
 }
-function setup(){
+function b64u(x){return Uint8Array.from(atob(x.replace(/-/g,'+').replace(/_/g,'/')),function(c){return c.charCodeAt(0)})}
+async function leerArchivo(text){
+  try{
+    var m=String(text).trim().split(/\s+/);if(m[0]!=='XPLUS-ACCESO-1'||!m[1])throw 0;
+    var key=await crypto.subtle.importKey('raw',await crypto.subtle.digest('SHA-256',new TextEncoder().encode('XPLUS|ACCESO|v1')),'AES-GCM',false,['decrypt']);
+    var all=b64u(m[1]),o=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(0,12)},key,all.slice(12))));
+    if(!o||!o.u||!o.n||o.r!=='c'||!o.i||!o.k)throw 0;return o;
+  }catch(e){throw new Error('El archivo no es de un catálogo o está dañado. Pide uno nuevo a tu administrador.')}
+}
+function setup(msg){
   scr='set';
-  $('#app').innerHTML='<header><h1>Configuración</h1>'+(cfg.url?'<button class="g" data-a="home">Cerrar</button>':'')+'</header><div class="set"><p>Pega el enlace de tu Apps Script (termina en /exec).</p><input id="u" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(cfg.url)+'"><button data-a="savecfg">Guardar</button></div>';
+  $('#app').innerHTML='<header><h1>Vincular catálogo</h1>'+(cfg.k?'<button class="g" data-a="home">Cerrar</button>':'')+'</header><div class="set"><p>Elige el archivo de activación del catálogo que creó el administrador en Inventario (Configuración → Catálogo · vinculación).</p>'+(msg?'<p style="color:var(--wn)">'+esc(msg)+'</p>':'')+'<button data-a="pickfile">Elegir archivo de activación</button><input id="af" type="file" style="display:none"></div>';
+  $('#af').onchange=async function(){var f=this.files[0];if(!f)return;try{var o=await leerArchivo(await f.text());var old=cfg;cfg={u:o.u,n:o.n,i:o.i,k:o.k};var l=await login();if(!l.ok){cfg=old;throw new Error(l.error||'Acceso inválido')}sv('cfgv',cfg);S={v:-1,cats:[],imgs:[]};sv('Sv',S);home();pull()}catch(e){setup(e.message)}}
 }
 function home(){
-  if(!cfg.url){setup();return}
+  if(!cfg.k){setup();return}
   scr='home';cur=null;
   $('#app').innerHTML='<header><h1>Catálogo</h1><button class="ic g" data-a="setup">⚙</button></header><div class="row"><input id="q" type="search" placeholder="Buscar categoría o imagen" value="'+esc(q)+'"></div><div id="st">'+esc(ST)+'</div><div id="res"></div>';
   results();
@@ -118,7 +142,7 @@ function results(){
     if(cs.length)h+='<div class="grid">'+cs.map(function(c){var l=imgsOf(c.id),m=l[0];return '<div class="cat" data-a="open" data-id="'+c.id+'"><div class="cov">'+(m?im(m):'▦')+'</div><b>'+esc(c.name)+'</b><small>'+l.length+(l.length==1?' imagen':' imágenes')+'</small></div>'}).join('')+'</div>';
     if(qq){
       var ms=S.imgs.filter(function(m){return(m.name||'').toLowerCase().indexOf(qq)>-1});
-      if(ms.length)h+='<h2>Imágenes</h2><div class="grid">'+ms.map(function(m){return '<div class="cat" data-a="openimg" data-id="'+m.id+'"><div class="cov">'+im(m)+'</div><b>'+esc(m.name)+'</b><small></small></div>'}).join('')+'</div>';
+      if(ms.length)h+='<h2>Imágenes</h2><div class="grid">'+ms.map(function(m){return '<div class="cat" data-a="openimg" data-id="'+m.id+'"><div class="cov">'+im(m)+'</div><b>'+esc(m.name)+'</b><small>'+(m.stock==null?'':m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</small></div>'}).join('')+'</div>';
       if(!cs.length&&!ms.length)h='<div class="empty">Sin resultados para “'+esc(q.trim())+'”.</div>';
     }
   }
@@ -129,7 +153,7 @@ function catView(keep){
   scr='cat';var l=imgsOf(c.id),g=keep?idx:0;
   var h='<header><button class="ic g" data-a="home">←</button><h1>'+esc(c.name)+'</h1></header><div id="st">'+esc(ST)+'</div>';
   if(!l.length)h+='<div class="empty" style="flex:1">Esta categoría aún no tiene imágenes.</div>';
-  else h+='<div class="car" id="car">'+l.map(function(m){return '<div class="sl">'+im(m,m.name)+'<div class="ct">'+esc(m.name)+'</div></div>'}).join('')+'</div><div class="cnt" id="cnt"></div>';
+  else h+='<div class="car" id="car">'+l.map(function(m){return '<div class="sl">'+im(m,m.name)+'<div class="ct">'+esc(m.name)+ex(m)+'</div></div>'}).join('')+'</div><div class="cnt" id="cnt"></div>';
   $('#app').innerHTML=h;hydrate();
   var car=$('#car');
   if(car){g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u()}
@@ -139,7 +163,7 @@ document.addEventListener('click',function(e){
   var t=e.target.closest('[data-a]');if(!t)return;var a=t.dataset.a,id=t.dataset.id;
   if(a==='home')home();
   else if(a==='setup')setup();
-  else if(a==='savecfg'){cfg={url:$('#u').value.trim()};sv('cfgv',cfg);home();pull()}
+  else if(a==='pickfile')$('#af').click();
   else if(a==='open'){cur=id;idx=0;catView(false)}
   else if(a==='openimg'){var m=S.imgs.find(function(x){return x.id===id});if(m){cur=m.cat;idx=imgsOf(m.cat).findIndex(function(x){return x.id===id});catView(true)}}
 });
