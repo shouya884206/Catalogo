@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      TIENDA_TOKEN: ${{ secrets.TIENDA_TOKEN }}
 
     strategy:
       fail-fast: false
@@ -193,6 +195,22 @@ jobs:
         with:
           name: apk-${{ matrix.file }}
           path: ${{ matrix.file }}.apk
+
+      - name: Publicar en la Tienda XPLUS
+        if: ${{ env.TIENDA_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.TIENDA_TOKEN }}
+          APP_NOMBRE: ${{ matrix.name }}
+          APP_PAQUETE: ${{ matrix.id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          n = os.environ.get('GITHUB_RUN_NUMBER', '1')
+          nota = subprocess.run(['git','log','-1','--pretty=%s'], capture_output=True, text=True).stdout.strip()
+          json.dump({'nombre':os.environ['APP_NOMBRE'],'paquete':os.environ['APP_PAQUETE'],'codigo':int(n),'version':'1.0.'+n,'notas':nota}, open('body.json','w'), ensure_ascii=False)
+          PY
+          gh release delete app-${{ matrix.file }} -R shouya884206/tienda-xplus --cleanup-tag -y || true
+          gh release create app-${{ matrix.file }} ${{ matrix.file }}.apk -R shouya884206/tienda-xplus --title "${{ matrix.name }}" --notes-file body.json
 
   release:
     needs: build
