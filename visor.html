@@ -101,7 +101,7 @@ var AO='cat',MIX=null,allY=0;
 function mixNew(){var a=S.imgs.map(function(m){return m.id});for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}MIX=a}
 function allList(){
   if(AO==='mix'){if(!MIX)mixNew();var k={};S.imgs.forEach(function(m){k[m.id]=m});var l=MIX.filter(function(id){return k[id]}).map(function(id){return k[id]});S.imgs.forEach(function(m){if(MIX.indexOf(m.id)<0){MIX.push(m.id);l.push(m)}});return l}
-  if(AO==='ex')return S.imgs.slice().sort(function(a,b){var x=a.stock==null?-1:a.stock,y=b.stock==null?-1:b.stock;return y-x||(a.t||0)-(b.t||0)});
+  if(AO==='ex')return S.imgs.filter(function(m){return m.stock>0}).sort(function(a,b){return b.stock-a.stock||(a.t||0)-(b.t||0)});
   var co={};S.cats.forEach(function(c){co[c.id]=c.t||0});
   return S.imgs.slice().sort(function(a,b){return (co[a.cat]||0)-(co[b.cat]||0)||(a.t||0)-(b.t||0)});
 }
