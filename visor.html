@@ -101,20 +101,21 @@ var AO='cat',MIX=null,allY=0;
 function mixNew(){var a=S.imgs.map(function(m){return m.id});for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}MIX=a}
 function allList(){
   if(AO==='mix'){if(!MIX)mixNew();var k={};S.imgs.forEach(function(m){k[m.id]=m});var l=MIX.filter(function(id){return k[id]}).map(function(id){return k[id]});S.imgs.forEach(function(m){if(MIX.indexOf(m.id)<0){MIX.push(m.id);l.push(m)}});return l}
+  if(AO==='ex')return S.imgs.slice().sort(function(a,b){var x=a.stock==null?-1:a.stock,y=b.stock==null?-1:b.stock;return y-x||(a.t||0)-(b.t||0)});
   var co={};S.cats.forEach(function(c){co[c.id]=c.t||0});
   return S.imgs.slice().sort(function(a,b){return (co[a.cat]||0)-(co[b.cat]||0)||(a.t||0)-(b.t||0)});
 }
 function exs(m){return m.stock==null?'':'<i class="'+(m.stock>0?'':'no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</i>'}
 function allView(keep){
   scr='all';var l=allList();
-  var h='<header><button class="ic g" data-a="home">←</button><h1>Todas las imágenes</h1></header><div class="seg"><button data-a="ao" data-id="mix" class="'+(AO==='mix'?'on':'')+'">Mezcladas</button><button data-a="ao" data-id="cat" class="'+(AO==='cat'?'on':'')+'">Por categoría</button></div><div id="st">'+esc(ST)+'</div>';
+  var h='<header><button class="ic g" data-a="home">←</button><h1>Todas las imágenes</h1></header><div class="seg"><button data-a="ao" data-id="mix" class="'+(AO==='mix'?'on':'')+'">Mezcladas</button><button data-a="ao" data-id="cat" class="'+(AO==='cat'?'on':'')+'">Por categoría</button><button data-a="ao" data-id="ex" class="'+(AO==='ex'?'on':'')+'">Más existencia</button></div><div id="st">'+esc(ST)+'</div>';
   if(!l.length)h+='<div class="empty" style="flex:1">Todavía no hay imágenes.</div>';
   else h+='<div id="res"><div class="grid">'+l.map(function(m){return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+im(m,m.name)+'</div><small>'+esc(m.name)+exs(m)+'</small></div>'}).join('')+'</div></div>';
   $('#app').innerHTML=h;hydrate();var r=$('#res');if(r&&keep)r.scrollTop=allY;
 }
 function allCar(g){
   scr='allcar';var l=allList();
-  var h='<header><button class="ic g" data-a="allback">←</button><h1>'+(AO==='mix'?'Mezcladas':'Por categoría')+'</h1></header><div class="car" id="car">'+l.map(function(m){return '<div class="sl">'+im(m,m.name)+'<div class="ct">'+esc(m.name)+ex(m)+'</div></div>'}).join('')+'</div><div class="cnt" id="cnt"></div>';
+  var h='<header><button class="ic g" data-a="allback">←</button><h1>'+(AO==='mix'?'Mezcladas':AO==='ex'?'Más existencia':'Por categoría')+'</h1></header><div class="car" id="car">'+l.map(function(m){return '<div class="sl">'+im(m,m.name)+'<div class="ct">'+esc(m.name)+ex(m)+'</div></div>'}).join('')+'</div><div class="cnt" id="cnt"></div>';
   $('#app').innerHTML=h;hydrate();
   var car=$('#car');g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length;var m=l[idx];if(m)for(var k=idx-1;k<=idx+1;k++)if(l[k])need(l[k].id)};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u();
 }
