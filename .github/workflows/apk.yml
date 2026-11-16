@@ -16,12 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - file: administrador
-            id: com.catalogo.admin
-            name: Admin Catálogo Plus
-            icon: admin
-            splash_color: "#160B08"
-
+          # El Admin Catálogo Plus quedó sin uso: ya no se compila ni se publica (así no se le ofrecen actualizaciones).
           - file: visor
             id: com.catalogo.visor
             name: Catálogo Plus
