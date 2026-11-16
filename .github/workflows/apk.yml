@@ -212,6 +212,25 @@ jobs:
           gh release delete app-${{ matrix.file }} -R shouya884206/tienda-xplus --cleanup-tag -y || true
           gh release create app-${{ matrix.file }} ${{ matrix.file }}.apk -R shouya884206/tienda-xplus --title "${{ matrix.name }}" --notes-file body.json
 
+      - name: Publicar versión para el aviso dentro de la app
+        if: ${{ env.TIENDA_TOKEN != '' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.TIENDA_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          n = os.environ.get('GITHUB_RUN_NUMBER', '1')
+          nota = subprocess.run(['git','log','-1','--pretty=%s'], capture_output=True, text=True).stdout.strip()
+          json.dump({'codigo':int(n),'version':'1.0.'+n,'notas':nota}, open('v.json','w'), ensure_ascii=False)
+          PY
+          SHA=$(gh api repos/shouya884206/xplus-versiones/contents/${{ matrix.file }}.json --jq .sha 2>/dev/null || true)
+          if [ -n "$SHA" ]; then
+            gh api -X PUT repos/shouya884206/xplus-versiones/contents/${{ matrix.file }}.json -f message="${{ matrix.file }} 1.0.${{ github.run_number }}" -f content="$(base64 -w0 v.json)" -f sha="$SHA"
+          else
+            gh api -X PUT repos/shouya884206/xplus-versiones/contents/${{ matrix.file }}.json -f message="${{ matrix.file }} 1.0.${{ github.run_number }}" -f content="$(base64 -w0 v.json)"
+          fi
+
   release:
     needs: build
     runs-on: ubuntu-latest
