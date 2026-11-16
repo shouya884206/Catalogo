@@ -44,6 +44,7 @@ jobs:
         run: |
           mkdir www
           cp ${{ matrix.file }}.html www/index.html
+          python3 inyectar-aviso.py ${{ matrix.file }} ${{ github.run_number }} actualizador.js www/index.html
 
           npm init -y
           npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
