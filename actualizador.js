@@ -9,13 +9,16 @@
   function lsGet() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } }
   function lsSet(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function consultar() {
+  var URL_API = 'https://api.github.com/repos/shouya884206/xplus-versiones/contents/' + ID + '.json?ref=main';
+  function pedir(url, hdr) {
     var ctl = window.AbortController ? new AbortController() : null, to = setTimeout(function () { if (ctl) ctl.abort(); }, 12000);
-    return fetch(URL_V + '?t=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+    return fetch(url, { cache: 'no-store', headers: hdr, signal: ctl ? ctl.signal : undefined })
       .then(function (r) { clearTimeout(to); return r.ok ? r.json() : null; })
       .then(function (j) { return j && Number(j.codigo) ? j : null; })
       .catch(function () { clearTimeout(to); return null; });
   }
+  /* primero la API de GitHub (sin caché); si falla, el archivo directo */
+  function consultar() { return pedir(URL_API, { Accept: 'application/vnd.github.raw+json' }).then(function (j) { return j || pedir(URL_V + '?t=' + Date.now()); }); }
   function cerrar() { var o = document.getElementById('xplus_upd'); if (o) o.remove(); }
   function dialogo() {
     if (!info || document.getElementById('xplus_upd')) return;
@@ -33,19 +36,19 @@
     document.getElementById('xplus_upd_luego').onclick = function () { var g = lsGet(); g.v = info.codigo; g.tarde = Date.now(); lsSet(g); cerrar(); };
     document.getElementById('xplus_upd_ir').onclick = function () { try { location.href = 'xplustienda://abrir'; } catch (e) { } };
   }
-  function revisar() {
+  function revisar(inicio) {
     if (!navigator.onLine) return;
     var g = lsGet(), ahora = Date.now();
-    if (g.ultima && ahora - g.ultima < 20 * 60000) return;
+    if (inicio !== true && g.ultima && ahora - g.ultima < 2 * 60000) return;
     consultar().then(function (j) {
       g = lsGet(); g.ultima = Date.now(); lsSet(g); if (!j) return;
       info = j; if (Number(j.codigo) <= BUILD) return;
-      if (g.v === j.codigo && g.tarde && Date.now() - g.tarde < 12 * 3600000) return;
+      if (g.v === j.codigo && g.tarde && Date.now() - g.tarde < 3 * 3600000) return;
       dialogo();
     });
   }
   function init() {
-    setTimeout(revisar, 7000);
+    setTimeout(function () { revisar(true); }, 1500);
     window.addEventListener('online', function () { setTimeout(revisar, 3000); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(revisar, 2000); });
   }
