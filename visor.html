@@ -59,6 +59,7 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 .cap{display:flex;gap:8px}
 .cap input{flex:1;text-align:center;font-weight:600}
 .ct{font-size:20px;font-weight:700;text-align:center;padding:4px 0 6px;min-height:36px}
+.seg{display:flex;gap:8px;padding:0 18px 12px}.seg button{flex:1;padding:10px 6px;font-size:14px;background:var(--card);color:var(--tx);border:1px solid var(--bd)}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}.tile{background:var(--card);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:var(--sh);border:1px solid var(--bd)}.tile .cov{aspect-ratio:1/1}.tile small{display:block;padding:8px 10px 10px;font-size:13px;font-weight:600;line-height:1.25}.tile small i{display:block;font-style:normal;font-weight:600;color:var(--ok);margin-top:2px}.tile small i.no{color:var(--bad)}
 .ex{font-size:15px;font-weight:600;color:#22c55e;margin-top:2px}.ex.no{color:#ef4444}
 .lnk{background:transparent;color:var(--mu);font-weight:500;text-decoration:underline;padding:4px}
 .cnt{text-align:center;color:var(--mu);font-size:13px;padding:10px 0 14px}
@@ -96,6 +97,27 @@ async function need(id){
 function hydrate(){document.querySelectorAll('img[data-i]').forEach(function(e){if(!e.getAttribute('src'))need(e.dataset.i)})}
 async function prefetch(){for(var i=0;i<S.imgs.length;i++)await need(S.imgs[i].id)}
 function im(m,alt){return '<img data-i="'+m.id+'" alt="'+esc(alt||'')+'"'+(IM[ik(m)]?' src="'+IM[ik(m)]+'"':'')+'>'}
+var AO='cat',MIX=null,allY=0;
+function mixNew(){var a=S.imgs.map(function(m){return m.id});for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}MIX=a}
+function allList(){
+  if(AO==='mix'){if(!MIX)mixNew();var k={};S.imgs.forEach(function(m){k[m.id]=m});var l=MIX.filter(function(id){return k[id]}).map(function(id){return k[id]});S.imgs.forEach(function(m){if(MIX.indexOf(m.id)<0){MIX.push(m.id);l.push(m)}});return l}
+  var co={};S.cats.forEach(function(c){co[c.id]=c.t||0});
+  return S.imgs.slice().sort(function(a,b){return (co[a.cat]||0)-(co[b.cat]||0)||(a.t||0)-(b.t||0)});
+}
+function exs(m){return m.stock==null?'':'<i class="'+(m.stock>0?'':'no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</i>'}
+function allView(keep){
+  scr='all';var l=allList();
+  var h='<header><button class="ic g" data-a="home">←</button><h1>Todas las imágenes</h1></header><div class="seg"><button data-a="ao" data-id="mix" class="'+(AO==='mix'?'on':'')+'">Mezcladas</button><button data-a="ao" data-id="cat" class="'+(AO==='cat'?'on':'')+'">Por categoría</button></div><div id="st">'+esc(ST)+'</div>';
+  if(!l.length)h+='<div class="empty" style="flex:1">Todavía no hay imágenes.</div>';
+  else h+='<div id="res"><div class="grid">'+l.map(function(m){return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+im(m,m.name)+'</div><small>'+esc(m.name)+exs(m)+'</small></div>'}).join('')+'</div></div>';
+  $('#app').innerHTML=h;hydrate();var r=$('#res');if(r&&keep)r.scrollTop=allY;
+}
+function allCar(g){
+  scr='allcar';var l=allList();
+  var h='<header><button class="ic g" data-a="allback">←</button><h1>'+(AO==='mix'?'Mezcladas':'Por categoría')+'</h1></header><div class="car" id="car">'+l.map(function(m){return '<div class="sl">'+im(m,m.name)+'<div class="ct">'+esc(m.name)+ex(m)+'</div></div>'}).join('')+'</div><div class="cnt" id="cnt"></div>';
+  $('#app').innerHTML=h;hydrate();
+  var car=$('#car');g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length;var m=l[idx];if(m)for(var k=idx-1;k<=idx+1;k++)if(l[k])need(l[k].id)};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u();
+}
 function ex(m){return m.stock==null?'':'<div class="ex'+(m.stock>0?'':' no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</div>'}
 function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
 async function post(b){var r=await fetch(cfg.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
@@ -131,7 +153,7 @@ function setup(msg){
 function home(){
   if(!cfg.k){setup();return}
   scr='home';cur=null;
-  $('#app').innerHTML='<header><h1>Catálogo</h1><button class="ic g" data-a="setup">⚙</button></header><div class="row"><input id="q" type="search" placeholder="Buscar categoría o imagen" value="'+esc(q)+'"></div><div id="st">'+esc(ST)+'</div><div id="res"></div>';
+  $('#app').innerHTML='<header><h1>Catálogo</h1><button class="ic g" data-a="setup">⚙</button></header><div class="row"><input id="q" type="search" placeholder="Buscar categoría o imagen" value="'+esc(q)+'"></div><div class="row"><button data-a="all" class="g" style="flex:1">Ver todas las imágenes ('+S.imgs.length+')</button></div><div id="st">'+esc(ST)+'</div><div id="res"></div>';
   results();
 }
 function results(){
@@ -158,12 +180,16 @@ function catView(keep){
   var car=$('#car');
   if(car){g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u()}
 }
-function refresh(){if(scr==='cat')catView(true);else if(scr==='home'){var a=document.activeElement;if(a&&a.id==='q')results();else home()}}
+function refresh(){if(scr==='all'){var r=$('#res');allY=r?r.scrollTop:allY;allView(true)}else if(scr==='cat')catView(true);else if(scr==='home'){var a=document.activeElement;if(a&&a.id==='q')results();else home()}}
 document.addEventListener('click',function(e){
   var t=e.target.closest('[data-a]');if(!t)return;var a=t.dataset.a,id=t.dataset.id;
   if(a==='home')home();
   else if(a==='setup')setup();
   else if(a==='pickfile')$('#af').click();
+  else if(a==='all'){allY=0;allView(false)}
+  else if(a==='ao'){if(id==='mix')mixNew();AO=id;allY=0;allView(false)}
+  else if(a==='allopen'){var r0=$('#res');allY=r0?r0.scrollTop:0;var l0=allList();allCar(l0.findIndex(function(x){return x.id===id}))}
+  else if(a==='allback')allView(true);
   else if(a==='open'){cur=id;idx=0;catView(false)}
   else if(a==='openimg'){var m=S.imgs.find(function(x){return x.id===id});if(m){cur=m.cat;idx=imgsOf(m.cat).findIndex(function(x){return x.id===id});catView(true)}}
 });
