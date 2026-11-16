@@ -32,7 +32,22 @@
       '<button id="xplus_upd_ir" style="width:100%;padding:12px;border:0;border-radius:12px;background:#22c55e;color:#04210f;font-size:15px;font-weight:800">Abrir la Tienda XPLUS</button>' +
       '<div style="font-size:12px;opacity:.6;text-align:center;margin-top:8px">Si no se abre, entra a la Tienda XPLUS desde tu teléfono y toca Actualizar.</div></div>';
     document.body.appendChild(o);
-    document.getElementById('xplus_upd_ir').onclick = function () { try { location.href = 'xplustienda://abrir'; } catch (e) { } };
+    document.getElementById('xplus_upd_ir').onclick = function () {
+      /* si la tienda abre, esta app pasa a segundo plano; si no pasa nada, la tienda no está instalada */
+      var abrio = false, v = function () { if (document.hidden) abrio = true; };
+      document.addEventListener('visibilitychange', v); window.addEventListener('blur', v);
+      try { location.href = 'xplustienda://abrir'; } catch (e) { }
+      setTimeout(function () {
+        document.removeEventListener('visibilitychange', v); window.removeEventListener('blur', v);
+        if (abrio || document.hidden || document.getElementById('xplus_sin')) return;
+        var d = document.createElement('div'); d.id = 'xplus_sin';
+        d.style.cssText = 'margin-top:12px;font-size:13px;background:#f59e0b22;border:1px solid #f59e0b;border-radius:10px;padding:9px 11px';
+        d.innerHTML = '<b>La Tienda XPLUS no está instalada.</b><br>Pídele al administrador que te la envíe. Mientras tanto puedes seguir usando la app.' +
+          '<button id="xplus_upd_seguir" style="width:100%;margin-top:10px;padding:11px;border:1px solid #ffffff33;border-radius:12px;background:transparent;color:#f3f4f6;font-size:14px">Continuar por ahora</button>';
+        o.firstChild.appendChild(d);
+        document.getElementById('xplus_upd_seguir').onclick = function () { o.remove(); };
+      }, 2200);
+    };
   }
   function revisar(inicio) {
     if (!navigator.onLine) return;
