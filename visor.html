@@ -129,13 +129,15 @@ async function call(b){
   if(r&&r.sesion){var l2=await login();if(!l2.ok)throw new Error(l2.error||'Acceso inválido');r=await post(Object.assign({ctoken:cfg.tok},b))}
   return r;
 }
+var pulling=false;
 async function pull(){
-  if(!cfg.k)return;
+  if(!cfg.k||pulling)return;pulling=true;
   try{
     var d=await call({action:'cat_list'});
     if(d.ok){var ch=JSON.stringify([d.cats,d.imgs])!==JSON.stringify([S.cats,S.imgs]);S={v:d.v,cats:d.cats,imgs:d.imgs};sv('Sv',S);setSt('');if(ch)refresh();prefetch()}
     else setSt(d.error||'No se pudo actualizar')
   }catch(e){setSt('Sin conexión: mostrando la última copia guardada')}
+  finally{pulling=false}
 }
 function b64u(x){return Uint8Array.from(atob(x.replace(/-/g,'+').replace(/_/g,'/')),function(c){return c.charCodeAt(0)})}
 async function leerArchivo(text){
@@ -198,7 +200,7 @@ document.addEventListener('input',function(e){if(e.target.id==='q'){q=e.target.v
 document.addEventListener('keydown',function(e){var car=$('#car');if(car){if(e.key==='ArrowRight')car.scrollBy({left:car.clientWidth,behavior:'smooth'});if(e.key==='ArrowLeft')car.scrollBy({left:-car.clientWidth,behavior:'smooth'})}});
 window.addEventListener('online',pull);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)pull()});
-setInterval(pull,60000);
+setInterval(function(){if(!document.hidden)pull()},10000);
 home();pull();
 </script>
 </body>
