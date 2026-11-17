@@ -60,7 +60,7 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 .cap input{flex:1;text-align:center;font-weight:600}
 .ct{font-size:20px;font-weight:700;text-align:center;padding:4px 0 6px;min-height:36px}
 .seg{display:flex;gap:8px;padding:0 18px 12px}.seg button{flex:1;padding:10px 6px;font-size:14px;background:var(--card);color:var(--tx);border:1px solid var(--bd)}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}.tile{background:var(--card);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:var(--sh);border:1px solid var(--bd)}.tile .cov{aspect-ratio:1/1}.tile small{display:block;padding:8px 10px 10px;font-size:13px;font-weight:600;line-height:1.25}.tile small i{display:block;font-style:normal;font-weight:600;color:var(--ok);margin-top:2px}.tile small i.no{color:var(--bad)}
-.ex{font-size:15px;font-weight:600;color:#22c55e;margin-top:2px}.ex.no{color:#ef4444}
+.cl{font-size:12px;color:#94a3b8;font-weight:600;letter-spacing:.2px}.ex{font-size:15px;font-weight:600;color:#22c55e;margin-top:2px}.ex.no{color:#ef4444}
 .lnk{background:transparent;color:var(--mu);font-weight:500;text-decoration:underline;padding:4px}
 .cnt{text-align:center;color:var(--mu);font-size:13px;padding:10px 0 14px}
 .ban{margin:0 18px 12px;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid var(--wn);font-size:14px;display:flex;flex-direction:column;gap:10px;line-height:1.4}
@@ -105,12 +105,31 @@ function allList(){
   var co={};S.cats.forEach(function(c){co[c.id]=c.t||0});
   return S.imgs.slice().sort(function(a,b){return (co[a.cat]||0)-(co[b.cat]||0)||(a.t||0)-(b.t||0)});
 }
+var norm=function(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')};
+const smNorm = s => norm(s).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function smLev(a, b) { const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 9; const d = []; for (let i = 0; i <= m; i++) { d[i] = [i]; } for (let j = 0; j <= n; j++) d[0][j] = j; for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) { d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); } return d[m][n]; }
+function smSub(w, x) { if (w[0] !== x[0]) return false; let i = 0; for (let k = 0; k < x.length && i < w.length; k++) if (x[k] === w[i]) i++; return i === w.length; }
+/* Devuelve 0 si no coincide; mientras más alto, mejor coincide. */
+function smartScore(q, text) {
+  const qt = smNorm(q).split(' ').filter(Boolean); if (!qt.length) return 1;
+  const t = smNorm(text), words = t.split(' '); let total = 0;
+  for (const w of qt) {
+    let b = 0;
+    if (words.includes(w)) b = 100; else if (words.some(x => x.startsWith(w))) b = 80; else if (t.includes(w)) b = 60;
+    else if (w.length >= 3 && words.some(x => smSub(w, x))) b = 35;
+    else if (w.length >= 4 && words.some(x => smLev(w, x.slice(0, w.length)) <= (w.length >= 7 ? 2 : 1) || smLev(w, x) <= 1)) b = 25;
+    if (!b) return 0; total += b;
+  }
+  return total + (t.startsWith(qt[0]) ? 20 : 0);
+}
+
+function cod(m){return m.clave?'<span class="cl">Código: '+esc(m.clave)+'</span> ':''}
 function exs(m){return m.stock==null?'':'<i class="'+(m.stock>0?'':'no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</i>'}
 function allView(keep){
   scr='all';var l=allList();
   var h='<header><button class="ic g" data-a="home">←</button><h1>Todas las imágenes</h1></header><div class="seg"><button data-a="ao" data-id="mix" class="'+(AO==='mix'?'on':'')+'">Mezcladas</button><button data-a="ao" data-id="cat" class="'+(AO==='cat'?'on':'')+'">Por categoría</button><button data-a="ao" data-id="ex" class="'+(AO==='ex'?'on':'')+'">Más existencia</button></div><div id="st">'+esc(ST)+'</div>';
   if(!l.length)h+='<div class="empty" style="flex:1">Todavía no hay imágenes.</div>';
-  else h+='<div id="res"><div class="grid">'+l.map(function(m){return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+im(m,m.name)+'</div><small>'+esc(m.name)+exs(m)+'</small></div>'}).join('')+'</div></div>';
+  else h+='<div id="res"><div class="grid">'+l.map(function(m){return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+im(m,m.name)+'</div><small>'+esc(m.name)+'<br>'+cod(m)+exs(m)+'</small></div>'}).join('')+'</div></div>';
   $('#app').innerHTML=h;hydrate();var r=$('#res');if(r&&keep)r.scrollTop=allY;
 }
 function allCar(g){
@@ -119,7 +138,7 @@ function allCar(g){
   $('#app').innerHTML=h;hydrate();
   var car=$('#car');g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length;var m=l[idx];if(m)for(var k=idx-1;k<=idx+1;k++)if(l[k])need(l[k].id)};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u();
 }
-function ex(m){return m.stock==null?'':'<div class="ex'+(m.stock>0?'':' no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</div>'}
+function ex(m){return (m.clave?'<div class="cl">Código: '+esc(m.clave)+'</div>':'')+(m.stock==null?'':'<div class="ex'+(m.stock>0?'':' no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</div>')}
 function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
 async function post(b){var r=await fetch(cfg.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
 async function login(){var r=await post({action:'acc_login',rol:'c',id:cfg.i,llave:cfg.k,neg:cfg.n});if(r.ok&&r.ctoken){cfg.tok=r.ctoken;sv('cfgv',cfg)}return r}
@@ -161,13 +180,13 @@ function home(){
 }
 function results(){
   var el=$('#res');if(!el)return;
-  var qq=q.trim().toLowerCase(),cs=S.cats.slice().sort(by).filter(function(c){return !qq||c.name.toLowerCase().indexOf(qq)>-1}),h='';
+  var qq=q.trim(),cs=S.cats.slice().sort(by).filter(function(c){return !qq||smartScore(qq,c.name)>0}),h='';
   if(!cs.length&&!qq)h='<div class="empty">Todavía no hay nada en el catálogo.<br>Conéctate a internet para descargarlo.</div>';
   else{
     if(cs.length)h+='<div class="grid">'+cs.map(function(c){var l=imgsOf(c.id),m=l[0];return '<div class="cat" data-a="open" data-id="'+c.id+'"><div class="cov">'+(m?im(m):'▦')+'</div><b>'+esc(c.name)+'</b><small>'+l.length+(l.length==1?' imagen':' imágenes')+'</small></div>'}).join('')+'</div>';
     if(qq){
-      var ms=S.imgs.filter(function(m){return(m.name||'').toLowerCase().indexOf(qq)>-1});
-      if(ms.length)h+='<h2>Imágenes</h2><div class="grid">'+ms.map(function(m){return '<div class="cat" data-a="openimg" data-id="'+m.id+'"><div class="cov">'+im(m)+'</div><b>'+esc(m.name)+'</b><small>'+(m.stock==null?'':m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</small></div>'}).join('')+'</div>';
+      var ms=S.imgs.map(function(m){return [m,smartScore(qq,(m.name||'')+' '+(m.clave||''))]}).filter(function(x){return x[1]>0}).sort(function(a,b){return b[1]-a[1]}).map(function(x){return x[0]});
+      if(ms.length)h+='<h2>Imágenes</h2><div class="grid">'+ms.map(function(m){return '<div class="cat" data-a="openimg" data-id="'+m.id+'"><div class="cov">'+im(m)+'</div><b>'+esc(m.name)+'</b><small>'+cod(m)+(m.stock==null?'':m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</small></div>'}).join('')+'</div>';
       if(!cs.length&&!ms.length)h='<div class="empty">Sin resultados para “'+esc(q.trim())+'”.</div>';
     }
   }
