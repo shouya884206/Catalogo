@@ -54,6 +54,7 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 .gmos{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:3px;width:100%;height:100%;background:var(--bd)}.gm{position:relative;background:#fff;overflow:hidden;min-height:0}.gm img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.gmore{position:absolute;inset:0;background:rgba(0,0,0,.55);color:#fff;font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center}
 .gsl .gmos{flex:1;min-height:0;border-radius:22px;overflow:hidden;box-shadow:var(--sh)}.gver{font-size:13px;font-weight:600;color:var(--ac);margin-top:4px}
 .gscroll{flex:1;overflow:auto;padding:0 14px 24px;min-height:0}.gstrip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}.gstrip::-webkit-scrollbar{display:none}.gp{flex:0 0 78%;aspect-ratio:1;scroll-snap-align:center;position:relative;border-radius:18px;background:#fff;border:1px solid var(--bd);overflow:hidden}.gp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.gnote{font-size:12px;color:var(--mu);margin:8px 2px 12px}.glist{display:flex;flex-direction:column;gap:8px}.gr{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:9px;box-shadow:var(--sh)}.gt{position:relative;width:54px;height:54px;flex:none;border-radius:10px;background:#fff;border:1px solid var(--bd);overflow:hidden}.gt img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.gi{flex:1;min-width:0}.gi b{display:block;font-size:15px}.gi small{color:var(--mu);font-size:12px}.gpr{font-weight:800;font-size:16px;color:var(--ac);white-space:nowrap}
+#cg{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:8px;background:var(--card);color:var(--tx);border:1px solid var(--bd);box-shadow:0 4px 18px rgba(0,0,0,.25);border-radius:99px;padding:8px 14px;font-size:13px;font-weight:600;white-space:nowrap;pointer-events:none}#cg[hidden]{display:none}#cg i{width:9px;height:9px;border-radius:50%;background:var(--wn);animation:cgp 1s infinite}#cg.ok i{background:var(--ok);animation:none}#cg.off i{animation:none}@keyframes cgp{50%{opacity:.3}}
 .sl>img,.ph{flex:1;min-height:0;border-radius:22px;background:var(--ph);box-shadow:var(--sh)}
 .sl>img{width:100%;object-fit:contain}
 .ph{position:relative;overflow:hidden}
@@ -75,7 +76,7 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"></div><div id="cg" hidden></div>
 <script>
 function ld(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -103,11 +104,19 @@ async function need(id){
   if(IM[k])return IM[k];
   var d=await iget(k);
   if(!d&&cfg.k){try{var r=await call({action:'cat_img',id:id});if(r.ok){d='data:'+r.mime+';base64,'+r.data;iput(k,d)}}catch(e){}}
-  if(d){IM[k]=d;document.querySelectorAll('img[data-i="'+id+'"]').forEach(function(e){e.src=d})}
+  if(d){IM[k]=d;document.querySelectorAll('img[data-i="'+id+'"]').forEach(function(e){e.src=d});if(PF)cgPintar()}
   return d;
 }
 function hydrate(){document.querySelectorAll('img[data-i]').forEach(function(e){if(!e.getAttribute('src'))need(e.dataset.i)})}
-async function prefetch(){for(var i=0;i<S.imgs.length;i++)await need(S.imgs[i].id)}
+var PF=false,cgT=0;
+function cgCuenta(){var n=0;S.imgs.forEach(function(m){if(IM[ik(m)])n++});return n}
+/* Indicador: imágenes que se están cargando; cuando ya están, se ven con la calidad con la que se subieron */
+function cgPintar(fin){
+  var e=$('#cg');if(!e)return;var t=S.imgs.length,d=cgCuenta();clearTimeout(cgT);
+  if(!t||(d>=t&&!fin)){e.hidden=true;return}
+  if(d>=t){e.className='ok';e.innerHTML='<i></i>✓ Todas las imágenes cargadas';e.hidden=false;cgT=setTimeout(function(){e.hidden=true},3500);return}
+  e.className=PF?'':'off';e.innerHTML='<i></i>'+(PF?'Cargando imágenes · ':'Imágenes por cargar · ')+d+' de '+t;e.hidden=false}
+async function prefetch(){if(PF)return;PF=true;var d0=cgCuenta();cgPintar();try{for(var i=0;i<S.imgs.length;i++){await need(S.imgs[i].id);if(i%3===0)cgPintar()}}finally{PF=false;cgPintar(cgCuenta()>d0)}}
 function im(m,alt){return '<img data-i="'+m.id+'" alt="'+esc(alt||'')+'"'+(IM[ik(m)]?' src="'+IM[ik(m)]+'"':'')+'>'}
 var AO='cat',MIX=null,allY=0,curG='';
 function mixNew(){var a=S.imgs.map(function(m){return m.id});for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}MIX=a}
