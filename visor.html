@@ -63,8 +63,8 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 .cap{display:flex;gap:8px}
 .cap input{flex:1;text-align:center;font-weight:600}
 .ct{font-size:20px;font-weight:700;text-align:center;padding:4px 0 6px;min-height:36px}
-.seg{display:flex;gap:8px;padding:0 18px 12px}.seg button{flex:1;padding:10px 6px;font-size:14px;background:var(--card);color:var(--tx);border:1px solid var(--bd)}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}.tile{background:var(--card);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:var(--sh);border:1px solid var(--bd)}.tile .cov{aspect-ratio:1/1}.tile small{display:block;padding:8px 10px 10px;font-size:13px;font-weight:600;line-height:1.25}.tile small i{display:block;font-style:normal;font-weight:600;color:var(--ok);margin-top:2px}.tile small i.no{color:var(--bad)}
-.cl{font-size:12px;color:#94a3b8;font-weight:600;letter-spacing:.2px}.ex{font-size:15px;font-weight:600;color:#22c55e;margin-top:2px}.ex.no{color:#ef4444}
+.seg{display:flex;gap:6px;padding:0 18px 12px}.seg button{flex:1;padding:10px 4px;font-size:13px;line-height:1.15;background:var(--card);color:var(--tx);border:1px solid var(--bd)}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}.tile{background:var(--card);border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:var(--sh);border:1px solid var(--bd)}.tile .cov{aspect-ratio:1/1}.tile small{display:block;padding:8px 10px 10px;font-size:13px;font-weight:600;line-height:1.25}.tile small i{display:block;font-style:normal;font-weight:600;color:var(--ok);margin-top:2px}.tile small i.no{color:var(--bad)}
+.pe{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;flex-wrap:wrap}.pe .bg{font-size:10.5px;font-weight:800;color:#fff;background:#15803d;border-radius:6px;padding:4px 6px;white-space:nowrap}.pe .bg.no{background:#dc2626}.pe .pp{font-size:13.5px;font-weight:900;color:#1d1b18;background:#fde047;border-radius:99px;padding:4px 9px;white-space:nowrap}.sl .pe{justify-content:center;gap:10px;margin-top:4px}.sl .pe .bg{font-size:14px;padding:5px 11px}.sl .pe .pp{font-size:19px;padding:5px 15px}.cl{font-size:12px;color:#94a3b8;font-weight:600;letter-spacing:.2px}.ex{font-size:15px;font-weight:600;color:#22c55e;margin-top:2px}.ex.no{color:#ef4444}
 .lnk{background:transparent;color:var(--mu);font-weight:500;text-decoration:underline;padding:4px}
 .cnt{text-align:center;color:var(--mu);font-size:13px;padding:10px 0 14px}
 .ban{margin:0 18px 12px;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid var(--wn);font-size:14px;display:flex;flex-direction:column;gap:10px;line-height:1.4}
@@ -123,6 +123,7 @@ function mixNew(){var a=S.imgs.map(function(m){return m.id});for(var i=a.length-
 function allList(){return collapse(allList0())}
 function allList0(){
   if(AO==='mix'){if(!MIX)mixNew();var k={};S.imgs.forEach(function(m){k[m.id]=m});var l=MIX.filter(function(id){return k[id]}).map(function(id){return k[id]});S.imgs.forEach(function(m){if(MIX.indexOf(m.id)<0){MIX.push(m.id);l.push(m)}});return l}
+  if(AO==='sin')return S.imgs.filter(function(m){return m.stock!=null&&!(m.stock>0)}).sort(function(a,b){return (a.t||0)-(b.t||0)});
   if(AO==='ex')return S.imgs.filter(function(m){return m.stock>0}).sort(function(a,b){return b.stock-a.stock||(a.t||0)-(b.t||0)});
   var co={};S.cats.forEach(function(c){co[c.id]=c.t||0});
   return S.imgs.slice().sort(function(a,b){return (co[a.cat]||0)-(co[b.cat]||0)||(a.t||0)-(b.t||0)});
@@ -146,21 +147,22 @@ function smartScore(q, text) {
 }
 
 function cod(m){return m.clave?'<span class="cl">Código: '+esc(m.clave)+'</span> ':''}
-function exs(m){return m.stock==null?'':'<i class="'+(m.stock>0?'':'no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</i>'}
+function pe(m){var b=m.stock==null?'':'<b class="bg'+(m.stock>0?'':' no')+'">'+(m.stock>0?'En existencia: '+(+m.stock):'Agotado')+'</b>',p=Number(m.pr)>0?'<b class="pp">'+money(m.pr)+'</b>':'';return (b||p)?'<div class="pe">'+b+p+'</div>':''}
+function exs(m){return pe(m)}
 function allView(keep){
   scr='all';var l=allList();
-  var h='<header><button class="ic g" data-a="home">←</button><h1>Todas las imágenes</h1></header><div class="seg"><button data-a="ao" data-id="mix" class="'+(AO==='mix'?'on':'')+'">Mezcladas</button><button data-a="ao" data-id="cat" class="'+(AO==='cat'?'on':'')+'">Por categoría</button><button data-a="ao" data-id="ex" class="'+(AO==='ex'?'on':'')+'">Más existencia</button></div><div id="st">'+esc(ST)+'</div>';
-  if(!l.length)h+='<div class="empty" style="flex:1">Todavía no hay imágenes.</div>';
-  else h+='<div id="res"><div class="grid">'+l.map(function(m){if(m.isg)return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+gMos(m)+'</div><small>'+esc(m.name)+'<br><i>'+m.ms.length+' presentaciones</i></small></div>';return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+im(m,m.name)+'</div><small>'+esc(m.name)+'<br>'+cod(m)+exs(m)+'</small></div>'}).join('')+'</div></div>';
+  var h='<header><button class="ic g" data-a="home">←</button><h1>Todas las imágenes</h1></header><div class="seg"><button data-a="ao" data-id="mix" class="'+(AO==='mix'?'on':'')+'">Mezcladas</button><button data-a="ao" data-id="cat" class="'+(AO==='cat'?'on':'')+'">Por categoría</button><button data-a="ao" data-id="ex" class="'+(AO==='ex'?'on':'')+'">Más existencia</button><button data-a="ao" data-id="sin" class="'+(AO==='sin'?'on':'')+'">Sin existencia</button></div><div id="st">'+esc(ST)+'</div>';
+  if(!l.length)h+='<div class="empty" style="flex:1">'+(AO==='sin'?'No hay productos agotados.':'Todavía no hay imágenes.')+'</div>';
+  else h+='<div id="res"><div class="grid">'+l.map(function(m){if(m.isg)return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+gMos(m)+'</div><small>'+esc(m.name)+'<br><i>'+m.ms.length+' presentaciones</i></small></div>';return '<div class="tile" data-a="allopen" data-id="'+m.id+'"><div class="cov">'+im(m,m.name)+'</div><small>'+esc(m.name)+'<br>'+cod(m)+pe(m)+'</small></div>'}).join('')+'</div></div>';
   $('#app').innerHTML=h;hydrate();var r=$('#res');if(r&&keep)r.scrollTop=allY;
 }
 function allCar(g){
   scr='allcar';var l=allList();
-  var h='<header><button class="ic g" data-a="allback">←</button><h1>'+(AO==='mix'?'Mezcladas':AO==='ex'?'Más existencia':'Por categoría')+'</h1></header><div class="car" id="car">'+l.map(slide).join('')+'</div><div class="cnt" id="cnt"></div>';
+  var h='<header><button class="ic g" data-a="allback">←</button><h1>'+(AO==='mix'?'Mezcladas':AO==='ex'?'Más existencia':AO==='sin'?'Sin existencia':'Por categoría')+'</h1></header><div class="car" id="car">'+l.map(slide).join('')+'</div><div class="cnt" id="cnt"></div>';
   $('#app').innerHTML=h;hydrate();
   var car=$('#car');g=Math.max(0,Math.min(g,l.length-1));var u=function(){idx=Math.round(car.scrollLeft/car.clientWidth);$('#cnt').textContent=(idx+1)+' / '+l.length;var m=l[idx];if(m)for(var k=idx-1;k<=idx+1;k++)if(l[k])(l[k].isg?l[k].ms:[l[k]]).forEach(function(x){need(x.id)})};car.addEventListener('scroll',u);car.scrollLeft=g*car.clientWidth;u();
 }
-function ex(m){return (m.clave?'<div class="cl">Código: '+esc(m.clave)+'</div>':'')+(m.stock==null?'':'<div class="ex'+(m.stock>0?'':' no')+'">'+(m.stock>0?'Existencia: '+(+m.stock):'Agotado')+'</div>')}
+function ex(m){return (m.clave?'<div class="cl">Código: '+esc(m.clave)+'</div>':'')+pe(m)}
 function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
 async function post(b){var r=await fetch(cfg.u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
 async function login(){var r=await post({action:'acc_login',rol:'c',id:cfg.i,llave:cfg.k,neg:cfg.n});if(r.ok&&r.ctoken){cfg.tok=r.ctoken;sv('cfgv',cfg)}return r}
