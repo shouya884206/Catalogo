@@ -56,8 +56,8 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 .gsl .gmos{flex:1;min-height:0;border-radius:22px;overflow:hidden;box-shadow:var(--sh)}.gver{font-size:13px;font-weight:600;color:var(--ac);margin-top:4px}
 .gscroll{flex:1;overflow:auto;padding:0 14px 24px;min-height:0}.gstrip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}.gstrip::-webkit-scrollbar{display:none}.gp{flex:0 0 78%;aspect-ratio:1;scroll-snap-align:center;position:relative;border-radius:18px;background:#fff;border:1px solid var(--bd);overflow:hidden}.gp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.gnote{font-size:12px;color:var(--mu);margin:8px 2px 12px}.glist{display:flex;flex-direction:column;gap:8px}.gr{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:9px;box-shadow:var(--sh)}.gt{position:relative;width:54px;height:54px;flex:none;border-radius:10px;background:#fff;border:1px solid var(--bd);overflow:hidden}.gt img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.gi{flex:1;min-width:0}.gi b{display:block;font-size:15px}.gi small{color:var(--mu);font-size:12px}.gpr{font-weight:800;font-size:16px;color:var(--ac);white-space:nowrap}
 #cg{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:8px;background:var(--card);color:var(--tx);border:1px solid var(--bd);box-shadow:0 4px 18px rgba(0,0,0,.25);border-radius:99px;padding:8px 14px;font-size:13px;font-weight:600;white-space:nowrap;pointer-events:none}#cg[hidden]{display:none}#cg i{width:9px;height:9px;border-radius:50%;background:var(--wn);animation:cgp 1s infinite}#cg.ok i{background:var(--ok);animation:none}#cg.off i{animation:none}@keyframes cgp{50%{opacity:.3}}
-.sl>img,.ph{flex:1;min-height:0;border-radius:22px;background:var(--ph);box-shadow:var(--sh)}
-.sl>img{width:100%;object-fit:contain}
+.sl>img,.ph{flex:0 1 auto;min-height:0;border-radius:22px;background:var(--ph);box-shadow:var(--sh)}
+.sl>img{width:100%;height:auto;max-height:100%;object-fit:contain}.sl>img:not([src]){aspect-ratio:1/1;max-height:70%}.sl{justify-content:center}
 .ph{position:relative;overflow:hidden}
 .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .badge{position:absolute;left:12px;top:12px;background:var(--wn);color:#fff;font-size:12.5px;font-weight:700;border-radius:99px;padding:4px 11px}
@@ -78,10 +78,11 @@ h2{font-size:14px;color:var(--mu);padding:4px 18px 8px;font-weight:600}
 </head>
 <body>
 <div id="app"></div><div id="cg" hidden></div>
+<script src="fb.js"></script>
 <script>
 function ld(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-var cfg=ld('cfgv',{}),S=ld('Sv',{v:-1,cats:[],imgs:[],groups:[],mon:'C$'}),IM={},scr='home',cur=null,idx=0,q='',ST='';
+var cfg=ld('cfgv',{});if(cfg.k&&!cfg.fb)cfg={};var _c0=0,S=ld('Sv',{v:-1,cats:[],imgs:[],groups:[],mon:'C$'}),IM={},scr='home',cur=null,idx=0,q='',ST='';
 var $=function(s){return document.querySelector(s)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
 var by=function(a,b){return(a.t||0)-(b.t||0)};
@@ -104,7 +105,7 @@ async function need(id){
   var m=S.imgs.find(function(x){return x.id===id});if(!m)return null;var k=ik(m);
   if(IM[k])return IM[k];
   var d=await iget(k);
-  for(var t=0;!d&&cfg.k&&t<2;t++){try{var r=await call({action:'cat_img',id:id});if(r&&r.ok){d='data:'+r.mime+';base64,'+r.data;iput(k,d)}}catch(e){}}
+  for(var t=0;!d&&cfg.k&&t<2;t++){try{await ensure();var r=await FBX.get('negocios/'+cfg.nid+'/'+(m.hq?'cimg':'pimg')+'/'+id),x=r&&(r.data||r.img);if(!x&&m.hq){r=await FBX.get('negocios/'+cfg.nid+'/pimg/'+id);x=r&&r.img}if(x){d=x;iput(k,d)}}catch(e){}}
   if(d){IM[k]=d;document.querySelectorAll('img[data-i="'+id+'"]').forEach(function(e){e.src=d});if(PF)cgPintar()}
   return d;
 }
@@ -174,22 +175,38 @@ function allCar(g){
 }
 function ex(m){return (m.clave?'<div class="cl">Código: '+esc(m.clave)+'</div>':'')+pe(m)}
 function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
-async function post(b){var ac=new AbortController(),tm=setTimeout(function(){ac.abort()},b.action==='cat_img'?25000:30000);try{var r=await fetch(cfg.u,{method:'POST',signal:ac.signal,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return await r.json()}finally{clearTimeout(tm)}}
-async function login(){var r=await post({action:'acc_login',rol:'c',id:cfg.i,llave:cfg.k,neg:cfg.n});if(r.ok&&r.ctoken){cfg.tok=r.ctoken;sv('cfgv',cfg)}return r}
-async function call(b){
-  if(!cfg.tok){var l=await login();if(!l.ok)throw new Error(l.error||'Acceso inválido')}
-  var r=await post(Object.assign({ctoken:cfg.tok},b));
-  if(r&&r.sesion){var l2=await login();if(!l2.ok)throw new Error(l2.error||'Acceso inválido');r=await post(Object.assign({ctoken:cfg.tok},b))}
-  return r;
+/* ===== Firebase: sin enlace de Apps Script. El archivo de activación trae un usuario que solo puede LEER el catálogo. ===== */
+var FB_CONFIG={apiKey:'AIzaSyDdrM6tKYP7ZcsoIXhWPqcPjZ2VTAXWLh4',authDomain:'xplus-empresa.firebaseapp.com',projectId:'xplus-empresa',storageBucket:'xplus-empresa.firebasestorage.app',messagingSenderId:'382109912678',appId:'1:382109912678:web:902ef70b5fb00ae0e0e7a7'};
+var FBREADY=null,UNSUB=null;
+function fbMsg(e){var c=(e&&e.code)||'';if(/invalid-credential|wrong-password|user-not-found/.test(c))return 'Acceso al catálogo anulado. Pide un archivo nuevo al administrador.';if(/permission-denied/.test(c))return 'Acceso al catálogo vencido o anulado. Pide un archivo nuevo al administrador.';if(/network|unavailable/.test(c))return 'Sin conexión: mostrando la última copia guardada';return (e&&e.message)||String(e)}
+function ensure(){
+  if(!window.FBX)return Promise.reject(new Error('Falta el componente de Firebase'));
+  FBX.init(FB_CONFIG);
+  if(!FBREADY)FBREADY=new Promise(function(ok){var done=false;FBX.onAuth(function(uid){if(done)return;done=true;ok(uid)})}).then(function(uid){if(uid)return uid;return login()});
+  return FBREADY;
+}
+async function login(){
+  var uid=await FBX.signIn(String(cfg.i).toLowerCase()+'@usuarios.xplus.app',cfg.k);
+  var u=await FBX.get('usuarios/'+uid);
+  if(!u||u.rol!=='catalogo'||u.activo===false||u.nid!==cfg.nid){await FBX.signOut();var e=new Error('Acceso al catálogo vencido o anulado. Pide un archivo nuevo al administrador.');e.code='permission-denied';throw e}
+  return uid;
+}
+function aplicar(d){
+  if(!d)return;var n={v:d.v,cats:d.cats||[],imgs:d.imgs||[],groups:d.groups||[],mon:d.mon||'C$'};
+  var ch=JSON.stringify([n.cats,n.imgs,n.groups,n.mon])!==JSON.stringify([S.cats,S.imgs,S.groups||[],S.mon]);
+  S=n;sv('Sv',S);if(ch){refresh();prefetch()}
+}
+/* Escucha la hoja del catálogo: cualquier cambio de precio o existencia llega al instante */
+async function escuchar(){
+  if(UNSUB||!cfg.k)return;
+  try{await ensure();UNSUB=FBX.listenDoc('negocios/'+cfg.nid+'/meta/catalogo',function(d){setSt('');aplicar(d)},function(e){UNSUB=null;setSt(fbMsg(e))})}
+  catch(e){setSt(fbMsg(e))}
 }
 var pulling=false;
 async function pull(){
   if(!cfg.k||pulling)return;pulling=true;
-  try{
-    var d=await call({action:'cat_list'});
-    if(d.ok){var ch=JSON.stringify([d.cats,d.imgs,d.groups||[],d.mon])!==JSON.stringify([S.cats,S.imgs,S.groups||[],S.mon]);S={v:d.v,cats:d.cats,imgs:d.imgs,groups:d.groups||[],mon:d.mon||'C$'};sv('Sv',S);setSt('');if(ch)refresh();prefetch()}
-    else setSt(d.error||'No se pudo actualizar')
-  }catch(e){setSt('Sin conexión: mostrando la última copia guardada')}
+  try{await ensure();escuchar();var d=await FBX.get('negocios/'+cfg.nid+'/meta/catalogo');if(d){aplicar(d);setSt('')}else setSt('El inventario todavía no ha publicado el catálogo')}
+  catch(e){setSt(fbMsg(e))}
   finally{pulling=false}
 }
 function b64u(x){return Uint8Array.from(atob(x.replace(/-/g,'+').replace(/_/g,'/')),function(c){return c.charCodeAt(0)})}
@@ -198,13 +215,42 @@ async function leerArchivo(text){
     var m=String(text).trim().split(/\s+/);if(m[0]!=='XPLUS-ACCESO-1'||!m[1])throw 0;
     var key=await crypto.subtle.importKey('raw',await crypto.subtle.digest('SHA-256',new TextEncoder().encode('XPLUS|ACCESO|v1')),'AES-GCM',false,['decrypt']);
     var all=b64u(m[1]),o=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(0,12)},key,all.slice(12))));
-    if(!o||!o.u||!o.n||o.r!=='c'||!o.i||!o.k)throw 0;return o;
-  }catch(e){throw new Error('El archivo no es de un catálogo o está dañado. Pide uno nuevo a tu administrador.')}
+    if(!o||!o.fb||!o.nid||o.r!=='c'||!o.i||!o.k)throw 0;return o;
+  }catch(e){throw new Error('El archivo no es de un Catálogo XPLUS o está dañado. Pide uno nuevo en Inventario → Configuración.')}
+}
+async function vincular(text){
+  var o=await leerArchivo(text);var old=cfg;cfg={fb:1,n:o.n,i:o.i,k:o.k,nid:o.nid};
+  try{if(UNSUB){UNSUB();UNSUB=null}if(window.FBX&&FBX.uid())await FBX.signOut();FBREADY=null;await ensure()}catch(e2){cfg=old;FBREADY=null;throw new Error(fbMsg(e2))}
+  sv('cfgv',cfg);S={v:-1,cats:[],imgs:[],groups:[]};sv('Sv',S);home();pull();
+}
+/* Lee el QR de una foto de la galería */
+async function qrDeImagen(f){
+  if(!('BarcodeDetector' in window))throw new Error('Este teléfono no puede leer el QR desde una foto. Use «Escanear código QR» o el archivo de activación.');
+  var bm=await createImageBitmap(f),r=await new BarcodeDetector({formats:['qr_code']}).detect(bm);
+  var hit=r.find(function(x){return /^XPLUS-ACCESO-1\s/.test(x.rawValue)});
+  if(!hit)throw new Error(r.length?'Ese QR no es de este Catálogo.':'No se encontró un código QR en la imagen. Elija una foto donde se vea completo.');
+  return hit.rawValue;
+}
+/* Escáner de código QR con la cámara (lector del propio Android, sin librerías) */
+var QRS=null;
+function qrCerrar(){if(!QRS)return;clearInterval(QRS.t);try{QRS.st&&QRS.st.getTracks().forEach(function(t){t.stop()})}catch(e){}var e=$('#qrx');if(e)e.remove();QRS=null}
+async function qrEscanear(){
+  if(!('BarcodeDetector' in window)){setup('Este teléfono no puede leer códigos QR desde la app. Use el archivo de activación.');return}
+  var ov=document.createElement('div');ov.id='qrx';ov.style.cssText='position:fixed;inset:0;background:#000;z-index:99;display:flex;flex-direction:column';
+  ov.innerHTML='<video id="qrv" playsinline muted style="flex:1;width:100%;object-fit:cover"></video><div style="position:absolute;left:50%;top:45%;width:240px;height:240px;margin:-120px 0 0 -120px;border:3px solid #4fd1ff;border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div><p id="qrh" style="position:absolute;left:0;right:0;bottom:110px;text-align:center;color:#fff;font-size:16px">Apunte al código QR que muestra Inventario</p><button id="qrc" style="position:absolute;left:20px;right:20px;bottom:30px">Cancelar</button>';
+  document.body.appendChild(ov);QRS={t:0,st:null,ok:false};
+  $('#qrc').onclick=function(){qrCerrar()};
+  try{
+    var det=new BarcodeDetector({formats:['qr_code']}),st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    if(!QRS){st.getTracks().forEach(function(t){t.stop()});return}
+    QRS.st=st;var v=$('#qrv');v.srcObject=st;await v.play();
+    QRS.t=setInterval(async function(){if(!QRS||QRS.ok)return;try{var r=await det.detect(v);if(r.length&&/^XPLUS-ACCESO-1\s/.test(r[0].rawValue)){QRS.ok=true;var txt=r[0].rawValue;$('#qrh').textContent='Vinculando…';try{await vincular(txt);qrCerrar()}catch(e){qrCerrar();setup(e.message)}}}catch(e){}},300);
+  }catch(e){qrCerrar();setup('No se pudo abrir la cámara. Revise el permiso de cámara de la app o use «Elegir imagen del QR o archivo».')}
 }
 function setup(msg){
   scr='set';
-  $('#app').innerHTML='<header><h1>Vincular catálogo</h1>'+(cfg.k?'<button class="g" data-a="home">Cerrar</button>':'')+'</header><div class="set"><p>Elige el archivo de activación del catálogo que creó el administrador en Inventario (Configuración → Catálogo · vinculación).</p>'+(msg?'<p style="color:var(--wn)">'+esc(msg)+'</p>':'')+'<button data-a="pickfile">Elegir archivo de activación</button><input id="af" type="file" style="display:none"></div>';
-  $('#af').onchange=async function(){var f=this.files[0];if(!f)return;try{var o=await leerArchivo(await f.text());var old=cfg;cfg={u:o.u,n:o.n,i:o.i,k:o.k};var l=await login();if(!l.ok){cfg=old;throw new Error(l.error||'Acceso inválido')}sv('cfgv',cfg);S={v:-1,cats:[],imgs:[]};sv('Sv',S);home();pull()}catch(e){setup(e.message)}}
+  $('#app').innerHTML='<header><h1>Vincular catálogo</h1>'+(cfg.k?'<button class="g" data-a="home">Cerrar</button>':'')+'</header><div class="set"><p>En Inventario entre a Configuración → Catálogo · vinculación → «Vincular Catálogo (código QR)» y escanéelo aquí.</p>'+(msg?'<p style="color:var(--wn)">'+esc(msg)+'</p>':'')+'<button data-a="scanqr">Escanear código QR</button><button data-a="pickfile" class="g" style="margin-top:10px">Elegir imagen del QR o archivo</button><p style="font-size:13px;margin-top:8px">Si no tiene el QR a la mano, pida que le manden la imagen (Inventario → «Compartir imagen del QR») y elíjala de su galería.</p><input id="af" type="file" accept="image/*,.txt,text/plain" style="display:none"></div>';
+  $('#af').onchange=async function(){var f=this.files[0];if(!f)return;try{if(/^image\//.test(f.type)||/\.(png|jpe?g|webp)$/i.test(f.name)){setSt('');await vincular(await qrDeImagen(f))}else await vincular(await f.text())}catch(e){setup(e.message)}}
 }
 function home(){
   if(!cfg.k){setup();return}
@@ -255,6 +301,7 @@ document.addEventListener('click',function(e){
   else if(a==='ao'){if(id==='mix')mixNew();AO=id;allY=0;allView(false)}
   else if(a==='allopen'){var r0=$('#res');allY=r0?r0.scrollTop:0;var l0=allList();allCar(l0.findIndex(function(x){return x.id===id}))}
   else if(a==='allback')allView(true);
+  else if(a==='scanqr')qrEscanear();
   else if(a==='open'){cur=id;idx=0;catView(false)}
   else if(a==='opengrp'){curG=id;gFrom=scr==='cat'?'cat':scr==='allcar'?'allcar':'home';grpView(id)}
   else if(a==='grpback'){if(gFrom==='cat')catView(true);else if(gFrom==='allcar')allCar(idx);else home()}
@@ -264,7 +311,7 @@ document.addEventListener('input',function(e){if(e.target.id==='q'){q=e.target.v
 document.addEventListener('keydown',function(e){var car=$('#car');if(car){if(e.key==='ArrowRight')car.scrollBy({left:car.clientWidth,behavior:'smooth'});if(e.key==='ArrowLeft')car.scrollBy({left:-car.clientWidth,behavior:'smooth'})}});
 window.addEventListener('online',pull);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)pull()});
-setInterval(function(){if(!document.hidden)pull()},10000);
+setInterval(function(){if(!document.hidden&&!UNSUB)pull()},30000);
 home();pull();
 </script>
 </body>
