@@ -40,15 +40,12 @@ jobs:
           mkdir www
           cp ${{ matrix.file }}.html www/index.html
           python3 inyectar-aviso.py ${{ matrix.file }} ${{ github.run_number }} actualizador.js www/index.html
-          (cd fb && npm install --no-audit --no-fund && npx esbuild entry.js --bundle --minify --format=iife --target=es2019 --outfile=../www/fb.js)
 
           npm init -y
           npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
 
           npx cap init "${{ matrix.name }}" ${{ matrix.id }} --web-dir www
           npx cap add android
-          python3 -c "f='android/app/src/main/AndroidManifest.xml';x=open(f).read();x=x if 'permission.CAMERA' in x else x.replace('<application','<uses-permission android:name=\"android.permission.CAMERA\" />\n    <uses-feature android:name=\"android.hardware.camera\" android:required=\"false\" />\n    <application',1);open(f,'w').write(x)"
-          grep -c "permission.CAMERA" android/app/src/main/AndroidManifest.xml
           npx cap sync android
 
       - name: Crear logotipo de inicio completo
@@ -194,7 +191,6 @@ jobs:
         with:
           name: apk-${{ matrix.file }}
           path: ${{ matrix.file }}.apk
-          retention-days: 1
 
       - name: Publicar en la Tienda XPLUS
         if: ${{ env.TIENDA_TOKEN != '' }}

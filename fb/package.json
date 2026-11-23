@@ -1,9 +1,0 @@
-{
-  "name": "xplus-fb-bundle",
-  "private": true,
-  "description": "Empaqueta el SDK de Firebase en www/js/fb.js (lo hace GitHub Actions)",
-  "dependencies": {
-    "esbuild": "^0.24.0",
-    "firebase": "^11.0.0"
-  }
-}
