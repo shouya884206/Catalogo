@@ -174,7 +174,9 @@ function allCar(g){
 }
 function ex(m){return (m.clave?'<div class="cl">Código: '+esc(m.clave)+'</div>':'')+pe(m)}
 function setSt(s){ST=s;var e=$('#st');if(e)e.textContent=s}
-async function post(b){var ac=new AbortController(),tm=setTimeout(function(){ac.abort()},b.action==='cat_img'?25000:30000);try{var r=await fetch(cfg.u,{method:'POST',signal:ac.signal,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return await r.json()}finally{clearTimeout(tm)}}
+async function post(b){var ms=b.action==='cat_img'?25000:b.action==='cat_stk'?15000:30000,ac=window.AbortController?new AbortController():null,tm=null;
+  var tope=new Promise(function(_,no){tm=setTimeout(function(){if(ac)ac.abort();no(new Error('Tiempo agotado'))},ms)});
+  try{var r=await Promise.race([fetch(cfg.u,{method:'POST',signal:ac?ac.signal:undefined,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)}),tope]);return await Promise.race([r.json(),tope])}finally{clearTimeout(tm)}}
 async function login(){var r=await post({action:'acc_login',rol:'c',id:cfg.i,llave:cfg.k,neg:cfg.n});if(r.ok&&r.ctoken){cfg.tok=r.ctoken;sv('cfgv',cfg)}return r}
 async function call(b){
   if(!cfg.tok){var l=await login();if(!l.ok)throw new Error(l.error||'Acceso inválido')}
@@ -187,10 +189,29 @@ async function pull(){
   if(!cfg.k||pulling)return;pulling=true;
   try{
     var d=await call({action:'cat_list'});
-    if(d.ok){var ch=JSON.stringify([d.cats,d.imgs,d.groups||[],d.mon])!==JSON.stringify([S.cats,S.imgs,S.groups||[],S.mon]);S={v:d.v,cats:d.cats,imgs:d.imgs,groups:d.groups||[],mon:d.mon||'C$'};sv('Sv',S);setSt('');if(ch)refresh();prefetch()}
+    if(d.ok){var ch=JSON.stringify([d.cats,d.imgs,d.groups||[],d.mon])!==JSON.stringify([S.cats,S.imgs,S.groups||[],S.mon]);S={v:d.v,cats:d.cats,imgs:d.imgs,groups:d.groups||[],mon:d.mon||'C$',lv:d.lv||''};sv('Sv',S);LT=Date.now();setSt('');if(ch)refresh();prefetch()}
     else setSt(d.error||'No se pudo actualizar')
   }catch(e){setSt('Sin conexión: mostrando la última copia guardada')}
   finally{pulling=false}
+}
+/* Existencias rápidas (código GC v13): cada 10 s pide solo las existencias (dato muy pequeño, el servidor responde sin leer el archivo grande).
+   Si cambió la lista (nombres, precios, fotos, categorías) o pasaron 2 minutos, baja la lista completa. Con un código GC viejo sigue como antes. */
+var LT=0,STK_NO=false,stking=false;
+async function stk(){
+  if(!cfg.k||stking||pulling)return;
+  if(STK_NO||!S.lv||Date.now()-LT>120000)return pull();
+  stking=true;
+  try{
+    var d=await call({action:'cat_stk'});
+    if(d&&d.ok&&d.s){
+      if(d.lv!==S.lv){stking=false;return pull()}
+      var ch=false;S.imgs.forEach(function(m){if(m.stock==null)return;var n=d.s[m.id];if(n!==undefined&&n!==m.stock){m.stock=n;ch=true}});
+      if(ch){sv('Sv',S);refresh()}
+      if(/^Sin conexi/.test(ST))setSt('');
+    }else if(d&&/Acci.n desconocida/.test(d.error||'')){STK_NO=true;stking=false;return pull()}
+    else if(d&&!d.ok)setSt(d.error||'No se pudo actualizar');
+  }catch(e){setSt('Sin conexión: mostrando la última copia guardada')}
+  finally{stking=false}
 }
 function b64u(x){return Uint8Array.from(atob(x.replace(/-/g,'+').replace(/_/g,'/')),function(c){return c.charCodeAt(0)})}
 async function leerArchivo(text){
@@ -262,9 +283,9 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('input',function(e){if(e.target.id==='q'){q=e.target.value;results()}});
 document.addEventListener('keydown',function(e){var car=$('#car');if(car){if(e.key==='ArrowRight')car.scrollBy({left:car.clientWidth,behavior:'smooth'});if(e.key==='ArrowLeft')car.scrollBy({left:-car.clientWidth,behavior:'smooth'})}});
-window.addEventListener('online',pull);
-document.addEventListener('visibilitychange',function(){if(!document.hidden)pull()});
-setInterval(function(){if(!document.hidden)pull()},10000);
+window.addEventListener('online',stk);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)stk()});
+setInterval(function(){if(!document.hidden)stk()},10000);
 home();pull();
 </script>
 </body>
